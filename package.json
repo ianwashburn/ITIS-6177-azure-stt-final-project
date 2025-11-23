@@ -1,0 +1,17 @@
+{
+  "name": "final-project-resources",
+  "version": "1.0.0",
+  "main": "transcription.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0",
+    "microsoft-cognitiveservices-speech-sdk": "^1.47.0",
+    "multer": "^2.0.2"
+  },
+  "description": ""
+}
