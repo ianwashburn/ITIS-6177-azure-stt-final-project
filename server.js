@@ -63,21 +63,25 @@ function transcribeWavFile(filePath, speechKey, speechRegion) {
   });
 }
 
-function synthesizeToWavFile(text, speechKey, speechRegion, outPath) {
+function synthesizeToWavBuffer(text, speechKey, speechRegion) {
   return new Promise((resolve, reject) => {
     const speechConfig = sdk.SpeechConfig.fromSubscription(speechKey, speechRegion);
 
-    // Output audio directly to a WAV file
-    const audioConfig = sdk.AudioConfig.fromAudioFileOutput(outPath);
-    const synthesizer = new sdk.SpeechSynthesizer(speechConfig, audioConfig);
+    // Optional: ensure we get WAV back (usually default, but this makes it explicit)
+    speechConfig.speechSynthesisOutputFormat =
+      sdk.SpeechSynthesisOutputFormat.Riff16Khz16BitMonoPcm;
+
+    // No audioConfig -> audioData returned in result
+    const synthesizer = new sdk.SpeechSynthesizer(speechConfig, null);
 
     synthesizer.speakTextAsync(
       text,
       result => {
         if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
           console.log("TTS synthesis completed.");
+          const audioData = result.audioData; // Uint8Array
           synthesizer.close();
-          resolve();
+          resolve(Buffer.from(audioData));   // Node Buffer
         } else {
           const details = result.errorDetails || result.reason;
           console.error("TTS synthesis failed:", details);
@@ -93,7 +97,6 @@ function synthesizeToWavFile(text, speechKey, speechRegion, outPath) {
     );
   });
 }
-
 
 // ---- POST /transcribe ---- //
 app.post("/transcribe", upload.single("audio"), async (req, res) => {
@@ -148,42 +151,25 @@ app.post("/tts", async (req, res) => {
     return res.status(500).json({ error: "Missing SPEECH_KEY or SPEECH_REGION in environment." });
   }
 
-  const outPath = `tts-output-${Date.now()}.wav`;
-
   try {
     console.log("Synthesizing TTS for text:", text);
-    await synthesizeToWavFile(text, speechKey, speechRegion, outPath);
+    const audioBuffer = await synthesizeToWavBuffer(text, speechKey, speechRegion);
 
-    // Stream the WAV file back to the client
     res.set({
       "Content-Type": "audio/wav",
+      "Content-Length": audioBuffer.length,
       "Content-Disposition": 'attachment; filename="speech.wav"'
     });
 
-    const readStream = fs.createReadStream(outPath);
-    readStream.pipe(res);
-
-    readStream.on("close", () => {
-      fs.unlink(outPath, () => {}); // clean up temp file
-    });
-
-    readStream.on("error", err => {
-      console.error("Error streaming TTS file:", err);
-      fs.unlink(outPath, () => {});
-      if (!res.headersSent) {
-        res.status(500).json({ error: "Failed to stream TTS audio." });
-      }
-    });
+    res.send(audioBuffer);
   } catch (err) {
     console.error("TTS synthesis failed:", err);
-    fs.unlink(outPath, () => {});
     res.status(500).json({
       error: "TTS synthesis failed",
       details: err.message || String(err)
     });
   }
 });
-
 
 // Start API
 const PORT = process.env.PORT || 3000;
