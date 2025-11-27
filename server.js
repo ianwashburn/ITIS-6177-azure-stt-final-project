@@ -110,7 +110,27 @@ app.get("/api/v1/health", (req, res) => {
 // ---- POST /transcribe ---- //
 app.post("/api/v1/transcribe", upload.single("audio"), async (req, res) => {
   if (!req.file) {
-    return res.status(400).json({ error: "No audio file uploaded. Must be form-data with key 'audio'." });
+    return res.status(400).json({
+      error: "No audio file uploaded. Must be form-data with key 'audio'."
+    });
+  }
+
+  // Validate file type
+  const originalName = req.file.originalname.toLowerCase();
+  const mime = req.file.mimetype;
+
+  const isWavExtension = originalName.endsWith(".wav");
+  const isWavMime =
+    mime === "audio/wav" ||
+    mime === "audio/x-wav" ||
+    mime === "audio/wave";
+
+  if (!isWavExtension || !isWavMime) {
+    // Delete temp file
+    fs.unlink(req.file.path, () => {});
+    return res.status(400).json({
+      error: "Invalid file format. Only .wav audio files are accepted."
+    });
   }
 
   const audioPath = req.file.path;
@@ -119,7 +139,9 @@ app.post("/api/v1/transcribe", upload.single("audio"), async (req, res) => {
 
   if (!speechKey || !speechRegion) {
     fs.unlink(audioPath, () => {});
-    return res.status(500).json({ error: "Missing SPEECH_KEY or SPEECH_REGION in environment." });
+    return res.status(500).json({
+      error: "Missing SPEECH_KEY or SPEECH_REGION in environment."
+    });
   }
 
   try {
@@ -127,9 +149,10 @@ app.post("/api/v1/transcribe", upload.single("audio"), async (req, res) => {
 
     const text = await transcribeWavFile(audioPath, speechKey, speechRegion);
 
-    fs.unlink(audioPath, () => {}); // remove temp file
+    // Remove temp file after processing
+    fs.unlink(audioPath, () => {});
 
-    res.json({
+    return res.json({
       text,
       lengthCharacters: text.length
     });
@@ -137,7 +160,8 @@ app.post("/api/v1/transcribe", upload.single("audio"), async (req, res) => {
   } catch (err) {
     console.error("Transcription error:", err);
     fs.unlink(audioPath, () => {});
-    res.status(500).json({
+
+    return res.status(500).json({
       error: "Transcription failed",
       details: err.message
     });
