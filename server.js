@@ -98,8 +98,17 @@ function synthesizeToWavBuffer(text, speechKey, speechRegion) {
   });
 }
 
+// Health check
+app.get("/api/v1/health", (req, res) => {
+  res.json({
+    status: "ok",
+    message: "Speech API is running",
+    timestamp: new Date().toISOString()
+  });
+});
+
 // ---- POST /transcribe ---- //
-app.post("/transcribe", upload.single("audio"), async (req, res) => {
+app.post("/api/v1/transcribe", upload.single("audio"), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: "No audio file uploaded. Must be form-data with key 'audio'." });
   }
@@ -137,7 +146,7 @@ app.post("/transcribe", upload.single("audio"), async (req, res) => {
 
 // POST /tts
 // Body: JSON { "text": "Hello world" }
-app.post("/tts", async (req, res) => {
+app.post("/api/v1/tts", async (req, res) => {
   const { text } = req.body;
 
   if (!text || typeof text !== "string" || !text.trim()) {
