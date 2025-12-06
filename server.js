@@ -8,6 +8,55 @@ const app = express();
 const upload = multer({ dest: "uploads/" }); // temporary folder
 app.use(express.json()); // so we can read JSON bodies for /tts
 
+app.get("/", (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Speech API</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            line-height: 1.6;
+          }
+          code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+          }
+        </style>
+      </head>
+      <body>
+        <h1>Welcome to the Speech API</h1>
+        <p>
+          This API provides speech-to-text and text-to-speech functionality
+          using Microsoft Azure Cognitive Services.
+        </p>
+
+        <h2>Available Endpoints</h2>
+        <ul>
+          <li><code>GET /api/v1/health</code> – Check API status</li>
+          <li><code>POST /api/v1/transcribe</code> – Upload a WAV file and receive transcribed text</li>
+          <li><code>POST /api/v1/tts</code> – Submit text and receive synthesized speech</li>
+        </ul>
+
+        <h2>Getting Started</h2>
+        <p>
+          This API is intended to be accessed via tools like Postman, curl,
+          or application code. Please refer to the project documentation
+          for request formats and examples.
+        </p>
+
+        <p>
+          If you see this page, the API is running correctly.
+        </p>
+      </body>
+    </html>
+  `);
+});
+
 // Health check
 app.get("/", (req, res) => {
   res.json({ status: "ok", message: "Speech API is running" });
